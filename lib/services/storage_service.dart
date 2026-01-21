@@ -4,6 +4,7 @@ class StorageService {
   static const _keyBlockedApps = 'blocked_apps';
   static const _keySetupComplete = 'setup_complete';
   static const _keyRegisteredTagId = 'registered_tag_id';
+  static const _keyBlockingEndTime = 'blocking_end_time';
 
   static late SharedPreferences _prefs;
 
@@ -36,6 +37,19 @@ class StorageService {
       await _prefs.remove(_keyRegisteredTagId);
     } else {
       await _prefs.setString(_keyRegisteredTagId, tagId);
+    }
+  }
+
+  static int? getBlockingEndTime() {
+    final value = _prefs.getInt(_keyBlockingEndTime);
+    return value == 0 ? null : value;
+  }
+
+  static Future<void> setBlockingEndTime(int? endTimeMillis) async {
+    if (endTimeMillis == null) {
+      await _prefs.remove(_keyBlockingEndTime);
+    } else {
+      await _prefs.setInt(_keyBlockingEndTime, endTimeMillis);
     }
   }
 }

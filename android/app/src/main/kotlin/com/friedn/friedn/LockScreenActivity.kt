@@ -12,6 +12,8 @@ import android.graphics.drawable.Drawable
 import android.nfc.NfcAdapter
 import android.nfc.Tag
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
@@ -23,6 +25,9 @@ import android.widget.Toast
 class LockScreenActivity : Activity() {
     private var nfcAdapter: NfcAdapter? = null
     private var blockedPackage: String? = null
+    private var timerTextView: TextView? = null
+    private val handler = Handler(Looper.getMainLooper())
+    private var timerRunnable: Runnable? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -78,7 +83,16 @@ class LockScreenActivity : Activity() {
             textSize = 16f
             setTextColor(subtitleColor)
             gravity = Gravity.CENTER
-            setPadding(0, 0, 0, 48)
+            setPadding(0, 0, 0, 24)
+        }
+
+        // Timer display
+        timerTextView = TextView(this).apply {
+            textSize = 20f
+            setTextColor(0xFFFF9800.toInt()) // Orange color
+            gravity = Gravity.CENTER
+            setPadding(24, 16, 24, 16)
+            visibility = View.GONE
         }
 
         val goBackButton = Button(this).apply {
@@ -94,9 +108,75 @@ class LockScreenActivity : Activity() {
         layout.addView(lockIcon)
         layout.addView(titleText)
         layout.addView(descText)
+        layout.addView(timerTextView)
         layout.addView(goBackButton)
 
         setContentView(layout)
+
+        // Start timer update
+        startTimerUpdate()
+    }
+
+    private fun startTimerUpdate() {
+        timerRunnable = object : Runnable {
+            override fun run() {
+                updateTimerDisplay()
+                handler.postDelayed(this, 1000)
+            }
+        }
+        handler.post(timerRunnable!!)
+    }
+
+    private fun stopTimerUpdate() {
+        timerRunnable?.let { handler.removeCallbacks(it) }
+        timerRunnable = null
+    }
+
+    private fun updateTimerDisplay() {
+        val remainingMillis = AppBlockerService.getRemainingTimeMillis(this)
+
+        if (remainingMillis == null) {
+            timerTextView?.visibility = View.GONE
+            return
+        }
+
+        if (remainingMillis <= 0) {
+            // Timer expired
+            timerTextView?.visibility = View.GONE
+            AppBlockerService.setBlockingEnabled(this, false)
+            AppBlockerService.setBlockingEndTime(this, null)
+
+            Toast.makeText(
+                this,
+                "Timer expired - blocking disabled",
+                Toast.LENGTH_SHORT
+            ).show()
+
+            finish()
+
+            // Re-launch the blocked app
+            blockedPackage?.let { pkg ->
+                val launchIntent = packageManager.getLaunchIntentForPackage(pkg)
+                launchIntent?.let { startActivity(it) }
+            }
+            return
+        }
+
+        timerTextView?.visibility = View.VISIBLE
+        timerTextView?.text = "Remaining: ${formatDuration(remainingMillis)}"
+    }
+
+    private fun formatDuration(millis: Long): String {
+        val totalSeconds = millis / 1000
+        val hours = totalSeconds / 3600
+        val minutes = (totalSeconds % 3600) / 60
+        val seconds = totalSeconds % 60
+
+        return when {
+            hours > 0 -> String.format("%dh %dm %ds", hours, minutes, seconds)
+            minutes > 0 -> String.format("%dm %ds", minutes, seconds)
+            else -> String.format("%ds", seconds)
+        }
     }
 
     // Simple lock icon drawn with Canvas
@@ -150,11 +230,18 @@ class LockScreenActivity : Activity() {
     override fun onResume() {
         super.onResume()
         enableNfcForegroundDispatch()
+        startTimerUpdate()
     }
 
     override fun onPause() {
         super.onPause()
         disableNfcForegroundDispatch()
+        stopTimerUpdate()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        stopTimerUpdate()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -203,6 +290,7 @@ class LockScreenActivity : Activity() {
             // Correct tag! Disable blocking entirely (not just session unlock)
             AppBlockerService.setBlockingEnabled(this, false)
             AppBlockerService.setSessionUnlocked(this, true)
+            AppBlockerService.setBlockingEndTime(this, null) // Clear timer
 
             Toast.makeText(
                 this,

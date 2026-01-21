@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
@@ -11,6 +12,8 @@ class AppStateProvider with ChangeNotifier {
   String? _registeredTagId;
   bool _isBlockingEnabled = false;
   bool _isLoading = true;
+  int? _blockingEndTime; // Unix timestamp in milliseconds
+  Timer? _timerCheckTimer;
 
   // Permission states
   bool _isNfcAvailable = false;
@@ -23,11 +26,23 @@ class AppStateProvider with ChangeNotifier {
   String? get registeredTagId => _registeredTagId;
   bool get isBlockingEnabled => _isBlockingEnabled;
   bool get isLoading => _isLoading;
+  int? get blockingEndTime => _blockingEndTime;
 
   bool get isNfcAvailable => _isNfcAvailable;
   bool get isNfcEnabled => _isNfcEnabled;
   bool get isAccessibilityEnabled => _isAccessibilityEnabled;
   bool get isOverlayPermissionGranted => _isOverlayPermissionGranted;
+
+  bool get hasActiveTimer =>
+      _blockingEndTime != null &&
+      _blockingEndTime! > DateTime.now().millisecondsSinceEpoch;
+
+  Duration? get remainingTime {
+    if (_blockingEndTime == null) return null;
+    final remaining = _blockingEndTime! - DateTime.now().millisecondsSinceEpoch;
+    if (remaining <= 0) return null;
+    return Duration(milliseconds: remaining);
+  }
 
   bool get isSetupComplete =>
       _registeredTagId != null &&
@@ -44,9 +59,37 @@ class AppStateProvider with ChangeNotifier {
     await _loadInstalledApps();
     _registeredTagId = StorageService.getRegisteredTagId();
     _isBlockingEnabled = await NativeService.isBlockingEnabled();
+    _blockingEndTime = await NativeService.getBlockingEndTime();
+
+    // Start timer check if blocking is enabled with a timer
+    if (_isBlockingEnabled && hasActiveTimer) {
+      _startTimerCheck();
+    }
 
     _isLoading = false;
     notifyListeners();
+  }
+
+  void _startTimerCheck() {
+    _timerCheckTimer?.cancel();
+    _timerCheckTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      _checkTimerExpired();
+      notifyListeners(); // Update UI with remaining time
+    });
+  }
+
+  void _stopTimerCheck() {
+    _timerCheckTimer?.cancel();
+    _timerCheckTimer = null;
+  }
+
+  Future<void> _checkTimerExpired() async {
+    if (_blockingEndTime == null) return;
+    if (DateTime.now().millisecondsSinceEpoch >= _blockingEndTime!) {
+      // Timer expired, disable blocking
+      await setBlockingEnabled(false);
+      await clearBlockingEndTime();
+    }
   }
 
   Future<void> _loadPermissionStates() async {
@@ -60,6 +103,16 @@ class AppStateProvider with ChangeNotifier {
     await _loadPermissionStates();
     // Also refresh blocking enabled state (may have changed from lock screen)
     _isBlockingEnabled = await NativeService.isBlockingEnabled();
+    _blockingEndTime = await NativeService.getBlockingEndTime();
+
+    // Update timer check based on current state
+    if (_isBlockingEnabled && hasActiveTimer) {
+      if (_timerCheckTimer == null) {
+        _startTimerCheck();
+      }
+    } else {
+      _stopTimerCheck();
+    }
     notifyListeners();
   }
 
@@ -125,6 +178,31 @@ class AppStateProvider with ChangeNotifier {
   Future<void> setBlockingEnabled(bool enabled) async {
     _isBlockingEnabled = enabled;
     await NativeService.setBlockingEnabled(enabled);
+    if (!enabled) {
+      _stopTimerCheck();
+      await clearBlockingEndTime();
+    } else if (hasActiveTimer) {
+      _startTimerCheck();
+    }
+    notifyListeners();
+  }
+
+  Future<void> setBlockingWithTimer(Duration duration) async {
+    final endTime = DateTime.now().millisecondsSinceEpoch + duration.inMilliseconds;
+    _blockingEndTime = endTime;
+    await StorageService.setBlockingEndTime(endTime);
+    await NativeService.setBlockingEndTime(endTime);
+    _isBlockingEnabled = true;
+    await NativeService.setBlockingEnabled(true);
+    _startTimerCheck();
+    notifyListeners();
+  }
+
+  Future<void> clearBlockingEndTime() async {
+    _blockingEndTime = null;
+    await StorageService.setBlockingEndTime(null);
+    await NativeService.setBlockingEndTime(null);
+    _stopTimerCheck();
     notifyListeners();
   }
 

@@ -97,6 +97,15 @@ class MainActivity : FlutterActivity() {
                     pendingNfcTagId = null // Clear after reading
                     result.success(tagId)
                 }
+                "setBlockingEndTime" -> {
+                    val endTime = call.argument<Number>("endTime")?.toLong()
+                    AppBlockerService.setBlockingEndTime(this, endTime)
+                    result.success(true)
+                }
+                "getBlockingEndTime" -> {
+                    val endTime = AppBlockerService.getBlockingEndTime(this)
+                    result.success(endTime)
+                }
                 else -> result.notImplemented()
             }
         }

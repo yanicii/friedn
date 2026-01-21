@@ -120,4 +120,17 @@ class NativeService {
       return null;
     }
   }
+
+  static Future<void> setBlockingEndTime(int? endTimeMillis) async {
+    await _channel.invokeMethod('setBlockingEndTime', {'endTime': endTimeMillis});
+  }
+
+  static Future<int?> getBlockingEndTime() async {
+    try {
+      final result = await _channel.invokeMethod('getBlockingEndTime');
+      return result as int?;
+    } catch (e) {
+      return null;
+    }
+  }
 }

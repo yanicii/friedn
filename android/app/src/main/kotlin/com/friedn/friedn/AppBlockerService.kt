@@ -17,6 +17,7 @@ class AppBlockerService : AccessibilityService() {
         private const val KEY_BLOCKING_ENABLED = "blocking_enabled"
         private const val KEY_REGISTERED_NFC_TAG = "registered_nfc_tag"
         private const val KEY_SESSION_UNLOCKED = "session_unlocked"
+        private const val KEY_BLOCKING_END_TIME = "blocking_end_time"
 
         private var instance: AppBlockerService? = null
         private var lastBlockedTime: Long = 0
@@ -58,6 +59,31 @@ class AppBlockerService : AccessibilityService() {
 
         fun isSessionUnlocked(context: Context): Boolean {
             return getPrefs(context).getBoolean(KEY_SESSION_UNLOCKED, false)
+        }
+
+        fun setBlockingEndTime(context: Context, endTimeMillis: Long?) {
+            Log.d(TAG, "Setting blocking end time: $endTimeMillis")
+            if (endTimeMillis == null) {
+                getPrefs(context).edit().remove(KEY_BLOCKING_END_TIME).apply()
+            } else {
+                getPrefs(context).edit().putLong(KEY_BLOCKING_END_TIME, endTimeMillis).apply()
+            }
+        }
+
+        fun getBlockingEndTime(context: Context): Long? {
+            val value = getPrefs(context).getLong(KEY_BLOCKING_END_TIME, 0)
+            return if (value == 0L) null else value
+        }
+
+        fun isTimerExpired(context: Context): Boolean {
+            val endTime = getBlockingEndTime(context) ?: return false
+            return System.currentTimeMillis() >= endTime
+        }
+
+        fun getRemainingTimeMillis(context: Context): Long? {
+            val endTime = getBlockingEndTime(context) ?: return null
+            val remaining = endTime - System.currentTimeMillis()
+            return if (remaining > 0) remaining else null
         }
 
         private fun getPrefs(context: Context): SharedPreferences {
@@ -103,6 +129,14 @@ class AppBlockerService : AccessibilityService() {
         // Check if blocking is enabled
         if (!isBlockingEnabled(this)) {
             Log.d(TAG, "Blocking is disabled")
+            return
+        }
+
+        // Check if timer has expired
+        if (isTimerExpired(this)) {
+            Log.d(TAG, "Timer has expired, disabling blocking")
+            setBlockingEnabled(this, false)
+            setBlockingEndTime(this, null)
             return
         }
 

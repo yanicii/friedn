@@ -15,6 +15,8 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _isWaitingForNfc = false;
   bool _pendingBlockingState = false;
+  Duration? _pendingTimerDuration;
+  bool _isTimerActivation = false;
 
   @override
   void initState() {
@@ -79,23 +81,40 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final provider = context.read<AppStateProvider>();
     final registeredTagId = provider.registeredTagId;
 
+    final isTimerMode = _isTimerActivation;
+    final timerDuration = _pendingTimerDuration;
+
     setState(() {
       _isWaitingForNfc = false;
+      _isTimerActivation = false;
+      _pendingTimerDuration = null;
     });
 
     Navigator.of(context).pop(); // Close the dialog
 
     if (registeredTagId != null && scannedTagId == registeredTagId) {
-      // Correct tag! Toggle blocking
-      provider.setBlockingEnabled(_pendingBlockingState);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_pendingBlockingState
-              ? 'friedn is enabled'
-              : 'friedn is disabled'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      // Correct tag!
+      if (isTimerMode && timerDuration != null) {
+        // Start blocking with timer
+        provider.setBlockingWithTimer(timerDuration);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Blocking enabled for ${_formatDuration(timerDuration)}'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        // Toggle blocking normally
+        provider.setBlockingEnabled(_pendingBlockingState);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_pendingBlockingState
+                ? 'friedn is enabled'
+                : 'friedn is disabled'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
     } else {
       // Wrong tag
       ScaffoldMessenger.of(context).showSnackBar(
@@ -320,43 +339,320 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Widget _buildBlockingToggle(AppStateProvider provider) {
     final canEnable = provider.isSetupComplete;
     final theme = Theme.of(context);
+    final remainingTime = provider.remainingTime;
 
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'App Blocking',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        provider.isBlockingEnabled
+                            ? 'Blocking is active - scan NFC to disable'
+                            : canEnable
+                                ? 'Scan NFC tag to enable'
+                                : 'Complete setup to enable',
+                        style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6)),
+                      ),
+                    ],
+                  ),
+                ),
+                Switch(
+                  value: provider.isBlockingEnabled,
+                  onChanged: canEnable
+                      ? (value) => _showNfcScanDialog(value)
+                      : null,
+                ),
+              ],
+            ),
+            if (provider.isBlockingEnabled && remainingTime != null) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.timer, size: 18, color: Colors.orange),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Remaining: ${_formatDuration(remainingTime)}',
+                      style: const TextStyle(
+                        color: Colors.orange,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            if (!provider.isBlockingEnabled && canEnable) ...[
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: () => _showTimerPickerDialog(),
+                icon: const Icon(Icons.timer),
+                label: const Text('Set Timer'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: theme.colorScheme.primary,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatDuration(Duration duration) {
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes.remainder(60);
+    final seconds = duration.inSeconds.remainder(60);
+    if (hours > 0) {
+      return '${hours}h ${minutes}m ${seconds}s';
+    } else if (minutes > 0) {
+      return '${minutes}m ${seconds}s';
+    } else {
+      return '${seconds}s';
+    }
+  }
+
+  void _showTimerPickerDialog() {
+    int selectedHours = 1;
+    int selectedMinutes = 0;
+    final theme = Theme.of(context);
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Set Blocking Timer'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Block apps for a specific duration. You can end it early by scanning your NFC tag.',
+                style: TextStyle(
+                  color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7),
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(
-                    'App Blocking',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                  // Hours picker
+                  Column(
+                    children: [
+                      Text(
+                        'Hours',
+                        style: TextStyle(
+                          color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6),
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: 80,
+                        height: 120,
+                        child: ListWheelScrollView.useDelegate(
+                          itemExtent: 40,
+                          perspective: 0.005,
+                          diameterRatio: 1.2,
+                          physics: const FixedExtentScrollPhysics(),
+                          onSelectedItemChanged: (index) {
+                            setDialogState(() {
+                              selectedHours = index;
+                            });
+                          },
+                          controller: FixedExtentScrollController(initialItem: selectedHours),
+                          childDelegate: ListWheelChildBuilderDelegate(
+                            childCount: 24,
+                            builder: (context, index) {
+                              return Center(
+                                child: Text(
+                                  index.toString().padLeft(2, '0'),
+                                  style: TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: selectedHours == index
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                    color: selectedHours == index
+                                        ? theme.colorScheme.primary
+                                        : theme.textTheme.bodyMedium?.color,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text(
+                      ':',
+                      style: TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: theme.textTheme.bodyMedium?.color,
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    provider.isBlockingEnabled
-                        ? 'Blocking is active - scan NFC to disable'
-                        : canEnable
-                            ? 'Scan NFC tag to enable'
-                            : 'Complete setup to enable',
-                    style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6)),
+                  // Minutes picker
+                  Column(
+                    children: [
+                      Text(
+                        'Minutes',
+                        style: TextStyle(
+                          color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6),
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: 80,
+                        height: 120,
+                        child: ListWheelScrollView.useDelegate(
+                          itemExtent: 40,
+                          perspective: 0.005,
+                          diameterRatio: 1.2,
+                          physics: const FixedExtentScrollPhysics(),
+                          onSelectedItemChanged: (index) {
+                            setDialogState(() {
+                              selectedMinutes = index;
+                            });
+                          },
+                          controller: FixedExtentScrollController(initialItem: selectedMinutes),
+                          childDelegate: ListWheelChildBuilderDelegate(
+                            childCount: 60,
+                            builder: (context, index) {
+                              return Center(
+                                child: Text(
+                                  index.toString().padLeft(2, '0'),
+                                  style: TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: selectedMinutes == index
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                    color: selectedMinutes == index
+                                        ? theme.colorScheme.primary
+                                        : theme.textTheme.bodyMedium?.color,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel'),
             ),
-            Switch(
-              value: provider.isBlockingEnabled,
-              onChanged: canEnable
-                  ? (value) => _showNfcScanDialog(value)
+            ElevatedButton(
+              onPressed: (selectedHours > 0 || selectedMinutes > 0)
+                  ? () {
+                      Navigator.of(dialogContext).pop();
+                      _startTimerWithNfcVerification(
+                        Duration(hours: selectedHours, minutes: selectedMinutes),
+                      );
+                    }
                   : null,
+              child: const Text('Start'),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _startTimerWithNfcVerification(Duration duration) {
+    _pendingTimerDuration = duration;
+    setState(() {
+      _isWaitingForNfc = true;
+      _isTimerActivation = true;
+    });
+
+    final theme = Theme.of(context);
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Enable Timer Blocking'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 80,
+              height: 80,
+              child: CircularProgressIndicator(
+                color: theme.colorScheme.primary,
+                strokeWidth: 3,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Icon(
+              Icons.nfc,
+              size: 48,
+              color: theme.colorScheme.primary,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Scan your NFC tag to start ${_formatDuration(duration)} timer',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Hold your tag near the back of your phone',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.textTheme.bodySmall?.color?.withOpacity(0.5),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              setState(() {
+                _isWaitingForNfc = false;
+                _isTimerActivation = false;
+                _pendingTimerDuration = null;
+              });
+              Navigator.of(dialogContext).pop();
+            },
+            child: const Text('Cancel'),
+          ),
+        ],
       ),
     );
   }
