@@ -78,7 +78,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-  void _verifyNfcAndToggle(String scannedTagId) {
+  Future<void> _verifyNfcAndToggle(String scannedTagId) async {
     final provider = context.read<AppStateProvider>();
     final registeredTagId = provider.registeredTagId;
 
@@ -97,7 +97,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       // Correct tag!
       if (isTimerMode && timerDuration != null) {
         // Start blocking with timer
-        provider.setBlockingWithTimer(timerDuration);
+        await provider.setBlockingWithTimer(timerDuration);
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Blocking enabled for ${_formatDuration(timerDuration)}'),
@@ -106,7 +107,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         );
       } else {
         // Toggle blocking normally
-        provider.setBlockingEnabled(_pendingBlockingState);
+        await provider.setBlockingEnabled(_pendingBlockingState);
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(_pendingBlockingState
