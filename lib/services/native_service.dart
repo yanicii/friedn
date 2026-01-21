@@ -1,21 +1,39 @@
 import 'package:flutter/services.dart';
 
+class NfcTagInfo {
+  final String tagId;
+  final bool hasData;
+  final bool isWritable;
+
+  NfcTagInfo({
+    required this.tagId,
+    required this.hasData,
+    required this.isWritable,
+  });
+}
+
 class NativeService {
   static const _channel = MethodChannel('com.friedn.friedn/native');
-  static Function(String tagId)? _onNfcTagScanned;
+  static Function(NfcTagInfo tagInfo)? _onNfcTagScanned;
 
   static void init() {
     _channel.setMethodCallHandler((call) async {
       if (call.method == 'onNfcTagScanned') {
         final tagId = call.arguments['tagId'] as String?;
+        final hasData = call.arguments['hasData'] as bool? ?? false;
+        final isWritable = call.arguments['isWritable'] as bool? ?? true;
         if (tagId != null && _onNfcTagScanned != null) {
-          _onNfcTagScanned!(tagId);
+          _onNfcTagScanned!(NfcTagInfo(
+            tagId: tagId,
+            hasData: hasData,
+            isWritable: isWritable,
+          ));
         }
       }
     });
   }
 
-  static void setNfcTagScannedCallback(Function(String tagId)? callback) {
+  static void setNfcTagScannedCallback(Function(NfcTagInfo tagInfo)? callback) {
     _onNfcTagScanned = callback;
   }
 

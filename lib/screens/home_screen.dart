@@ -37,12 +37,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   void _setupNfcCallback() {
-    NativeService.setNfcTagScannedCallback((tagId) {
+    NativeService.setNfcTagScannedCallback((tagInfo) {
       if (_isWaitingForNfc) {
-        _verifyNfcAndToggle(tagId);
+        _verifyNfcAndToggle(tagInfo.tagId);
       } else {
         // Handle NFC tag scanned when not explicitly waiting (e.g., app opened via NFC)
-        _handleNfcTagFromLaunch(tagId);
+        _handleNfcTagFromLaunch(tagInfo.tagId);
       }
     });
   }

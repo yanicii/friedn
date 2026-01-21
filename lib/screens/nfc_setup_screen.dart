@@ -12,7 +12,7 @@ class NfcSetupScreen extends StatefulWidget {
 
 class _NfcSetupScreenState extends State<NfcSetupScreen> with WidgetsBindingObserver {
   bool _isScanning = false;
-  String? _scannedTagId;
+  NfcTagInfo? _scannedTagInfo;
 
   @override
   void initState() {
@@ -30,14 +30,68 @@ class _NfcSetupScreenState extends State<NfcSetupScreen> with WidgetsBindingObse
   }
 
   void _setupNfcCallback() {
-    NativeService.setNfcTagScannedCallback((tagId) {
+    NativeService.setNfcTagScannedCallback((tagInfo) {
       if (_isScanning) {
         setState(() {
-          _scannedTagId = tagId;
           _isScanning = false;
         });
+
+        // Check if tag is writable
+        if (!tagInfo.isWritable) {
+          _showNonWritableTagError();
+          return;
+        }
+
+        // Check if tag has existing data
+        if (tagInfo.hasData) {
+          _confirmOverwriteTagData(tagInfo);
+        } else {
+          setState(() {
+            _scannedTagInfo = tagInfo;
+          });
+        }
       }
     });
+  }
+
+  void _showNonWritableTagError() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('This NFC tag is read-only and cannot be used with friedn.'),
+        backgroundColor: Colors.red,
+        duration: Duration(seconds: 3),
+      ),
+    );
+  }
+
+  void _confirmOverwriteTagData(NfcTagInfo tagInfo) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Tag Contains Data'),
+        content: const Text(
+          'This NFC tag already contains data. Do you want to use it anyway? The existing data may be overwritten.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              setState(() {
+                _scannedTagInfo = tagInfo;
+              });
+            },
+            child: const Text(
+              'Use Anyway',
+              style: TextStyle(color: Colors.orange),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -65,7 +119,7 @@ class _NfcSetupScreenState extends State<NfcSetupScreen> with WidgetsBindingObse
                 _buildNfcStatusCard(provider),
                 const SizedBox(height: 24),
                 _buildScanSection(),
-                if (_scannedTagId != null) ...[
+                if (_scannedTagInfo != null) ...[
                   const SizedBox(height: 24),
                   _buildScannedTagCard(provider),
                 ],
@@ -232,7 +286,7 @@ class _NfcSetupScreenState extends State<NfcSetupScreen> with WidgetsBindingObse
                 onPressed: () {
                   setState(() {
                     _isScanning = true;
-                    _scannedTagId = null;
+                    _scannedTagInfo = null;
                   });
                 },
                 icon: const Icon(Icons.nfc),
@@ -287,7 +341,7 @@ class _NfcSetupScreenState extends State<NfcSetupScreen> with WidgetsBindingObse
             ),
             const SizedBox(height: 8),
             Text(
-              'ID: $_scannedTagId',
+              'ID: ${_scannedTagInfo!.tagId}',
               style: TextStyle(
                 color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7),
                 fontFamily: 'monospace',
@@ -351,7 +405,7 @@ class _NfcSetupScreenState extends State<NfcSetupScreen> with WidgetsBindingObse
   }
 
   Future<void> _doRegisterTag(AppStateProvider provider) async {
-    await provider.registerNfcTag(_scannedTagId!);
+    await provider.registerNfcTag(_scannedTagInfo!.tagId);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -360,7 +414,7 @@ class _NfcSetupScreenState extends State<NfcSetupScreen> with WidgetsBindingObse
         ),
       );
       setState(() {
-        _scannedTagId = null;
+        _scannedTagInfo = null;
       });
     }
   }

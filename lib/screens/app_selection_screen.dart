@@ -117,6 +117,7 @@ class _AppSelectionScreenState extends State<AppSelectionScreen> {
     final totalCount = provider.installedApps.length;
     final isLocked = provider.isBlockingEnabled;
     final theme = Theme.of(context);
+    final allSelected = blockedCount == totalCount;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -131,14 +132,27 @@ class _AppSelectionScreenState extends State<AppSelectionScreen> {
               fontSize: 14,
             ),
           ),
-          if (blockedCount > 0 && !isLocked)
-            TextButton(
-              onPressed: () => _confirmClearAll(provider),
-              child: const Text(
-                'Clear All',
-                style: TextStyle(color: Colors.red),
-              ),
-            ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (!allSelected)
+                TextButton(
+                  onPressed: () => _confirmSelectAll(provider),
+                  child: Text(
+                    'Select All',
+                    style: TextStyle(color: theme.colorScheme.primary),
+                  ),
+                ),
+              if (blockedCount > 0 && !isLocked)
+                TextButton(
+                  onPressed: () => _confirmClearAll(provider),
+                  child: const Text(
+                    'Clear All',
+                    style: TextStyle(color: Colors.red),
+                  ),
+                ),
+            ],
+          ),
         ],
       ),
     );
@@ -220,6 +234,29 @@ class _AppSelectionScreenState extends State<AppSelectionScreen> {
     );
   }
 
+  void _confirmSelectAll(AppStateProvider provider) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Select All?'),
+        content: const Text('Are you sure you want to block all apps?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              provider.selectAllApps();
+              Navigator.pop(dialogContext);
+            },
+            child: const Text('Select All'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _confirmClearAll(AppStateProvider provider) {
     showDialog(
       context: context,
@@ -233,9 +270,7 @@ class _AppSelectionScreenState extends State<AppSelectionScreen> {
           ),
           TextButton(
             onPressed: () {
-              for (final app in provider.installedApps.where((a) => a.isBlocked).toList()) {
-                provider.toggleAppBlocked(app.packageName);
-              }
+              provider.clearAllApps();
               Navigator.pop(dialogContext);
             },
             child: const Text(

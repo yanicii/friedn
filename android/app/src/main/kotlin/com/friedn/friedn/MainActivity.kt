@@ -11,6 +11,8 @@ import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.nfc.NfcAdapter
 import android.nfc.Tag
+import android.nfc.tech.Ndef
+import android.nfc.tech.NdefFormatable
 import android.os.Bundle
 import android.provider.Settings
 import android.util.Base64
@@ -170,9 +172,22 @@ class MainActivity : FlutterActivity() {
                 val tagId = it.id.joinToString("") { byte -> "%02X".format(byte) }
                 Log.d(TAG, "NFC tag scanned: $tagId")
 
+                // Check if tag has existing data and is writable
+                val tagInfo = checkNfcTagInfo(it)
+                val hasData = tagInfo.first
+                val isWritable = tagInfo.second
+
+                Log.d(TAG, "Tag hasData: $hasData, isWritable: $isWritable")
+
+                val tagData = mapOf(
+                    "tagId" to tagId,
+                    "hasData" to hasData,
+                    "isWritable" to isWritable
+                )
+
                 if (methodChannel != null) {
                     // Flutter is ready, send directly
-                    methodChannel?.invokeMethod("onNfcTagScanned", mapOf("tagId" to tagId))
+                    methodChannel?.invokeMethod("onNfcTagScanned", tagData)
                 } else {
                     // Flutter not ready yet, store for later
                     Log.d(TAG, "Storing pending NFC tag: $tagId")
@@ -180,6 +195,41 @@ class MainActivity : FlutterActivity() {
                 }
             }
         }
+    }
+
+    private fun checkNfcTagInfo(tag: Tag): Pair<Boolean, Boolean> {
+        var hasData = false
+        var isWritable = false
+
+        // Try to read as NDEF
+        val ndef = Ndef.get(tag)
+        if (ndef != null) {
+            try {
+                ndef.connect()
+                val ndefMessage = ndef.cachedNdefMessage
+                hasData = ndefMessage != null && ndefMessage.records.isNotEmpty()
+                isWritable = ndef.isWritable
+                ndef.close()
+            } catch (e: Exception) {
+                Log.e(TAG, "Error reading NDEF tag", e)
+                // If we can't read it, assume it might have data and is not writable for safety
+                hasData = false
+                isWritable = false
+            }
+        } else {
+            // Check if it's formattable (empty but writable)
+            val ndefFormatable = NdefFormatable.get(tag)
+            if (ndefFormatable != null) {
+                hasData = false
+                isWritable = true
+            } else {
+                // Not NDEF compatible at all
+                hasData = false
+                isWritable = false
+            }
+        }
+
+        return Pair(hasData, isWritable)
     }
 
     private fun isAccessibilityServiceEnabled(): Boolean {

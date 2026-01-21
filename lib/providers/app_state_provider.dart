@@ -161,6 +161,28 @@ class AppStateProvider with ChangeNotifier {
     }
   }
 
+  Future<void> selectAllApps() async {
+    for (final app in _installedApps) {
+      if (!app.isBlocked) {
+        app.isBlocked = true;
+        _blockedApps.add(app.packageName);
+      }
+    }
+    await StorageService.setBlockedApps(_blockedApps);
+    await NativeService.setBlockedApps(_blockedApps);
+    notifyListeners();
+  }
+
+  Future<void> clearAllApps() async {
+    for (final app in _installedApps) {
+      app.isBlocked = false;
+    }
+    _blockedApps.clear();
+    await StorageService.setBlockedApps(_blockedApps);
+    await NativeService.setBlockedApps(_blockedApps);
+    notifyListeners();
+  }
+
   Future<void> registerNfcTag(String tagId) async {
     _registeredTagId = tagId;
     await StorageService.setRegisteredTagId(tagId);
