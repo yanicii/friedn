@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">friedn</string>
+    <string name="accessibility_service_description">friedn needs accessibility access to detect when blocked apps are opened and show the lock screen. This service only monitors which app is in the foreground - no personal content or data is accessed.</string>
+    <string name="notification_channel_name">App Blocking Service</string>
+    <string name="notification_channel_description">Shows when friedn is actively blocking apps</string>
+    <string name="notification_title">friedn is active</string>
+    <string name="notification_text">Blocking distracting apps</string>
+</resources>
