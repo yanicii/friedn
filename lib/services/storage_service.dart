@@ -1,10 +1,13 @@
 import 'package:shared_preferences/shared_preferences.dart';
+import '../models/blocking_session.dart';
 
 class StorageService {
   static const _keyBlockedApps = 'blocked_apps';
   static const _keySetupComplete = 'setup_complete';
   static const _keyRegisteredTagId = 'registered_tag_id';
   static const _keyBlockingEndTime = 'blocking_end_time';
+  static const _keyBlockingSessions = 'blocking_sessions';
+  static const _keyCurrentSessionStart = 'current_session_start';
 
   static late SharedPreferences _prefs;
 
@@ -50,6 +53,28 @@ class StorageService {
       await _prefs.remove(_keyBlockingEndTime);
     } else {
       await _prefs.setInt(_keyBlockingEndTime, endTimeMillis);
+    }
+  }
+
+  static List<BlockingSession> getBlockingSessions() {
+    final jsonStr = _prefs.getString(_keyBlockingSessions);
+    return BlockingSession.decodeList(jsonStr);
+  }
+
+  static Future<void> setBlockingSessions(List<BlockingSession> sessions) async {
+    await _prefs.setString(_keyBlockingSessions, BlockingSession.encodeList(sessions));
+  }
+
+  static int? getCurrentSessionStart() {
+    final value = _prefs.getInt(_keyCurrentSessionStart);
+    return value == 0 ? null : value;
+  }
+
+  static Future<void> setCurrentSessionStart(int? startTimeMillis) async {
+    if (startTimeMillis == null) {
+      await _prefs.remove(_keyCurrentSessionStart);
+    } else {
+      await _prefs.setInt(_keyCurrentSessionStart, startTimeMillis);
     }
   }
 }

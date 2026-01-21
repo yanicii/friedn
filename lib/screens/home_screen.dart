@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../models/app_info.dart';
 import '../providers/app_state_provider.dart';
 import '../services/native_service.dart';
 import 'app_selection_screen.dart';
@@ -174,6 +175,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 _buildBlockedAppsSection(provider),
                 const SizedBox(height: 16),
                 _buildSetupSection(provider),
+                const SizedBox(height: 16),
+                _buildStatsSection(provider),
               ],
             ),
           );
@@ -334,6 +337,229 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ),
       onTap: onTap,
     );
+  }
+
+  Widget _buildStatsSection(AppStateProvider provider) {
+    final stats = provider.getBlockingStats();
+    final theme = Theme.of(context);
+    final hasStats = stats.totalMinutes > 0 || provider.blockingSessions.isNotEmpty;
+
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: Theme(
+        data: theme.copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          initiallyExpanded: false,
+          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          title: Row(
+            children: [
+              Text(
+                'Statistics',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(
+                Icons.bar_chart,
+                color: theme.colorScheme.primary,
+                size: 20,
+              ),
+            ],
+          ),
+          children: [
+            if (!hasStats)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Text(
+                  'No blocking sessions yet. Enable blocking to start tracking.',
+                  style: TextStyle(
+                    color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              )
+            else ...[
+              _buildStatItem(
+                icon: Icons.hourglass_full,
+                label: 'Total time blocked',
+                value: _formatMinutes(stats.totalMinutes),
+                color: theme.colorScheme.primary,
+              ),
+              const SizedBox(height: 12),
+              _buildStatItem(
+                icon: Icons.calendar_view_week,
+                label: 'This week',
+                value: _formatMinutes(stats.weekMinutes),
+                color: Colors.blue,
+              ),
+              const SizedBox(height: 12),
+              _buildStatItem(
+                icon: Icons.today,
+                label: 'Today',
+                value: _formatMinutes(stats.todayMinutes),
+                color: Colors.green,
+              ),
+              if (stats.topBlockedApps.isNotEmpty) ...[
+                const SizedBox(height: 20),
+                Divider(color: theme.dividerColor),
+                const SizedBox(height: 12),
+                Text(
+                  'Most Blocked Apps',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ...stats.topBlockedApps.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final appStats = entry.value;
+                  final appInfo = provider.installedApps.firstWhere(
+                    (app) => app.packageName == appStats.packageName,
+                    orElse: () => AppInfo(
+                      packageName: appStats.packageName,
+                      appName: appStats.appName,
+                      icon: null,
+                      isBlocked: false,
+                    ),
+                  );
+                  return _buildTopAppItem(
+                    rank: index + 1,
+                    appInfo: appInfo,
+                    minutes: appStats.totalMinutes,
+                  );
+                }),
+              ],
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatItem({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    final theme = Theme.of(context);
+
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: color, size: 20),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            label,
+            style: theme.textTheme.bodyMedium,
+          ),
+        ),
+        Text(
+          value,
+          style: theme.textTheme.bodyLarge?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTopAppItem({
+    required int rank,
+    required AppInfo appInfo,
+    required int minutes,
+  }) {
+    final theme = Theme.of(context);
+    final rankColors = [Colors.amber, Colors.grey, Colors.brown];
+    final rankColor = rank <= 3 ? rankColors[rank - 1] : theme.colorScheme.primary;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              color: rankColor.withOpacity(0.2),
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Text(
+                '#$rank',
+                style: TextStyle(
+                  color: rankColor,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          if (appInfo.icon != null)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: Image.memory(
+                appInfo.icon!,
+                width: 32,
+                height: 32,
+              ),
+            )
+          else
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: theme.brightness == Brightness.dark
+                    ? Colors.grey[800]
+                    : Colors.grey[300],
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: const Icon(Icons.android, color: Colors.grey, size: 20),
+            ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              appInfo.appName,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w500,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          Text(
+            _formatMinutes(minutes),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatMinutes(int minutes) {
+    if (minutes < 60) {
+      return '${minutes}m';
+    }
+    final hours = minutes ~/ 60;
+    final mins = minutes % 60;
+    if (mins == 0) {
+      return '${hours}h';
+    }
+    return '${hours}h ${mins}m';
   }
 
   Widget _buildBlockingToggle(AppStateProvider provider) {

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import '../models/app_info.dart';
+import '../models/blocking_session.dart';
 import '../services/native_service.dart';
 import '../services/storage_service.dart';
 
@@ -14,6 +15,10 @@ class AppStateProvider with ChangeNotifier {
   bool _isLoading = true;
   int? _blockingEndTime; // Unix timestamp in milliseconds
   Timer? _timerCheckTimer;
+
+  // Stats tracking
+  List<BlockingSession> _blockingSessions = [];
+  int? _currentSessionStart;
 
   // Permission states
   bool _isNfcAvailable = false;
@@ -44,6 +49,8 @@ class AppStateProvider with ChangeNotifier {
     return Duration(milliseconds: remaining);
   }
 
+  List<BlockingSession> get blockingSessions => _blockingSessions;
+
   bool get isSetupComplete =>
       _registeredTagId != null &&
       _isAccessibilityEnabled &&
@@ -57,6 +64,7 @@ class AppStateProvider with ChangeNotifier {
     await _loadPermissionStates();
     await _loadBlockedApps();
     await _loadInstalledApps();
+    _loadBlockingSessions();
     _registeredTagId = StorageService.getRegisteredTagId();
     _isBlockingEnabled = await NativeService.isBlockingEnabled();
     _blockingEndTime = await NativeService.getBlockingEndTime();
@@ -68,6 +76,11 @@ class AppStateProvider with ChangeNotifier {
 
     _isLoading = false;
     notifyListeners();
+  }
+
+  void _loadBlockingSessions() {
+    _blockingSessions = StorageService.getBlockingSessions();
+    _currentSessionStart = StorageService.getCurrentSessionStart();
   }
 
   void _startTimerCheck() {
@@ -198,6 +211,14 @@ class AppStateProvider with ChangeNotifier {
   }
 
   Future<void> setBlockingEnabled(bool enabled) async {
+    if (enabled && !_isBlockingEnabled) {
+      // Starting a new session
+      await _startBlockingSession();
+    } else if (!enabled && _isBlockingEnabled) {
+      // Ending a session
+      await _endBlockingSession();
+    }
+
     _isBlockingEnabled = enabled;
     await NativeService.setBlockingEnabled(enabled);
     if (!enabled) {
@@ -210,6 +231,9 @@ class AppStateProvider with ChangeNotifier {
   }
 
   Future<void> setBlockingWithTimer(Duration duration) async {
+    // Start a new session
+    await _startBlockingSession();
+
     final endTime = DateTime.now().millisecondsSinceEpoch + duration.inMilliseconds;
     _blockingEndTime = endTime;
     await StorageService.setBlockingEndTime(endTime);
@@ -220,12 +244,115 @@ class AppStateProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> _startBlockingSession() async {
+    _currentSessionStart = DateTime.now().millisecondsSinceEpoch;
+    await StorageService.setCurrentSessionStart(_currentSessionStart);
+  }
+
+  Future<void> _endBlockingSession() async {
+    if (_currentSessionStart != null) {
+      final session = BlockingSession(
+        startTime: _currentSessionStart!,
+        endTime: DateTime.now().millisecondsSinceEpoch,
+        blockedApps: List<String>.from(_blockedApps),
+      );
+      _blockingSessions.add(session);
+      await StorageService.setBlockingSessions(_blockingSessions);
+      _currentSessionStart = null;
+      await StorageService.setCurrentSessionStart(null);
+    }
+  }
+
   Future<void> clearBlockingEndTime() async {
     _blockingEndTime = null;
     await StorageService.setBlockingEndTime(null);
     await NativeService.setBlockingEndTime(null);
     _stopTimerCheck();
     notifyListeners();
+  }
+
+  BlockingStats getBlockingStats() {
+    final now = DateTime.now();
+    final todayStart = DateTime(now.year, now.month, now.day).millisecondsSinceEpoch;
+    final weekStart = DateTime(now.year, now.month, now.day)
+        .subtract(Duration(days: now.weekday - 1))
+        .millisecondsSinceEpoch;
+
+    int totalMinutes = 0;
+    int weekMinutes = 0;
+    int todayMinutes = 0;
+    final appMinutes = <String, int>{};
+
+    // Calculate from completed sessions
+    for (final session in _blockingSessions) {
+      final sessionMinutes = session.durationMinutes;
+      totalMinutes += sessionMinutes;
+
+      // Check if session overlaps with this week
+      if (session.endTime != null && session.endTime! >= weekStart) {
+        final effectiveStart = session.startTime < weekStart ? weekStart : session.startTime;
+        final weekSessionMinutes = ((session.endTime! - effectiveStart) / 60000).floor();
+        weekMinutes += weekSessionMinutes;
+      }
+
+      // Check if session overlaps with today
+      if (session.endTime != null && session.endTime! >= todayStart) {
+        final effectiveStart = session.startTime < todayStart ? todayStart : session.startTime;
+        final todaySessionMinutes = ((session.endTime! - effectiveStart) / 60000).floor();
+        todayMinutes += todaySessionMinutes;
+      }
+
+      // Track per-app minutes
+      for (final packageName in session.blockedApps) {
+        appMinutes[packageName] = (appMinutes[packageName] ?? 0) + sessionMinutes;
+      }
+    }
+
+    // Add current active session if any
+    if (_currentSessionStart != null) {
+      final currentMinutes = ((now.millisecondsSinceEpoch - _currentSessionStart!) / 60000).floor();
+      totalMinutes += currentMinutes;
+
+      if (_currentSessionStart! >= weekStart) {
+        weekMinutes += currentMinutes;
+      } else {
+        final weekSessionMinutes = ((now.millisecondsSinceEpoch - weekStart) / 60000).floor();
+        weekMinutes += weekSessionMinutes;
+      }
+
+      if (_currentSessionStart! >= todayStart) {
+        todayMinutes += currentMinutes;
+      } else {
+        final todaySessionMinutes = ((now.millisecondsSinceEpoch - todayStart) / 60000).floor();
+        todayMinutes += todaySessionMinutes;
+      }
+
+      for (final packageName in _blockedApps) {
+        appMinutes[packageName] = (appMinutes[packageName] ?? 0) + currentMinutes;
+      }
+    }
+
+    // Get top 3 blocked apps
+    final sortedApps = appMinutes.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    final topApps = sortedApps.take(3).map((e) {
+      final appInfo = _installedApps.firstWhere(
+        (app) => app.packageName == e.key,
+        orElse: () => AppInfo(packageName: e.key, appName: e.key, icon: null, isBlocked: false),
+      );
+      return AppBlockStats(
+        packageName: e.key,
+        appName: appInfo.appName,
+        totalMinutes: e.value,
+      );
+    }).toList();
+
+    return BlockingStats(
+      totalMinutes: totalMinutes,
+      weekMinutes: weekMinutes,
+      todayMinutes: todayMinutes,
+      topBlockedApps: topApps,
+    );
   }
 
   Future<void> openNfcSettings() async {
