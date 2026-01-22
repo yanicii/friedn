@@ -148,7 +148,7 @@ class _NfcSetupScreenState extends State<NfcSetupScreen> with WidgetsBindingObse
               Text(
                 'ID: ${provider.registeredTagId}',
                 style: TextStyle(
-                  color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6),
+                  color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
                   fontFamily: 'monospace',
                 ),
               ),
@@ -176,7 +176,7 @@ class _NfcSetupScreenState extends State<NfcSetupScreen> with WidgetsBindingObse
 
     if (!provider.isNfcAvailable) {
       return Card(
-        color: Colors.red.withOpacity(0.2),
+        color: Colors.red.withValues(alpha: 0.2),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(
@@ -197,7 +197,7 @@ class _NfcSetupScreenState extends State<NfcSetupScreen> with WidgetsBindingObse
 
     if (!provider.isNfcEnabled) {
       return Card(
-        color: Colors.orange.withOpacity(0.2),
+        color: Colors.orange.withValues(alpha: 0.2),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(
@@ -221,7 +221,7 @@ class _NfcSetupScreenState extends State<NfcSetupScreen> with WidgetsBindingObse
     }
 
     return Card(
-      color: Colors.green.withOpacity(0.2),
+      color: Colors.green.withValues(alpha: 0.2),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
@@ -259,7 +259,7 @@ class _NfcSetupScreenState extends State<NfcSetupScreen> with WidgetsBindingObse
                   ? 'Hold your NFC tag near the back of your phone'
                   : 'Tap the button below and hold any NFC tag near your phone to register it as your unlock key.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6)),
+              style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6)),
             ),
             if (!_isScanning) ...[
               const SizedBox(height: 8),
@@ -269,14 +269,14 @@ class _NfcSetupScreenState extends State<NfcSetupScreen> with WidgetsBindingObse
                   Icon(
                     Icons.info_outline,
                     size: 14,
-                    color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5),
+                    color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.5),
                   ),
                   const SizedBox(width: 4),
                   Text(
                     'No data will ever be written to your tag',
                     style: TextStyle(
                       fontSize: 12,
-                      color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5),
+                      color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.5),
                     ),
                   ),
                 ],
@@ -302,8 +302,6 @@ class _NfcSetupScreenState extends State<NfcSetupScreen> with WidgetsBindingObse
                 icon: const Icon(Icons.nfc),
                 label: const Text('Start Scanning'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: theme.colorScheme.primary,
-                  foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 32,
                     vertical: 16,

@@ -1,26 +1,29 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  // Brand colors
-  static const Color primaryBlue = Color(0xFF0f3460);
-  static const Color accentBlue = Color(0xFF4A90D9);
+  // Brand colors - Black and White
+  static const Color primaryColor = Colors.black;
+  static const Color primaryColorLight = Colors.white;
 
   // Dark theme colors
-  static const Color darkBackground = Color(0xFF1a1a2e);
-  static const Color darkSurface = Color(0xFF16213e);
-  static const Color darkCard = Color(0xFF16213e);
+  static const Color darkBackground = Colors.black;
+  static const Color darkSurface = Color(0xFF1A1A1A);
+  static const Color darkCard = Color(0xFF1A1A1A);
 
   // Light theme colors
-  static const Color lightBackground = Color(0xFFF5F5F7);
-  static const Color lightSurface = Color(0xFFFFFFFF);
-  static const Color lightCard = Color(0xFFFFFFFF);
+  static const Color lightBackground = Color(0xFFF5F5F5);
+  static const Color lightSurface = Colors.white;
+  static const Color lightCard = Colors.white;
 
   static ThemeData darkTheme = ThemeData(
     brightness: Brightness.dark,
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: primaryBlue,
-      brightness: Brightness.dark,
+    colorScheme: const ColorScheme.dark(
+      primary: Colors.white,
+      onPrimary: Colors.black,
+      secondary: Colors.white,
+      onSecondary: Colors.black,
       surface: darkSurface,
+      onSurface: Colors.white,
     ),
     useMaterial3: true,
     scaffoldBackgroundColor: darkBackground,
@@ -33,6 +36,23 @@ class AppTheme {
       color: darkCard,
       elevation: 0,
     ),
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: Colors.white,
+        side: const BorderSide(color: Colors.white),
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        foregroundColor: Colors.white,
+      ),
+    ),
     switchTheme: SwitchThemeData(
       thumbColor: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.selected)) {
@@ -42,9 +62,9 @@ class AppTheme {
       }),
       trackColor: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.selected)) {
-          return Colors.green.withOpacity(0.5);
+          return Colors.green.withValues(alpha: 0.5);
         }
-        return Colors.grey.withOpacity(0.3);
+        return Colors.grey.withValues(alpha: 0.3);
       }),
     ),
     dividerColor: Colors.grey.shade700,
@@ -65,26 +85,49 @@ class AppTheme {
       textColor: Colors.white,
       collapsedTextColor: Colors.white,
     ),
+    progressIndicatorTheme: const ProgressIndicatorThemeData(
+      color: Colors.white,
+    ),
   );
 
   static ThemeData lightTheme = ThemeData(
     brightness: Brightness.light,
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: primaryBlue,
-      brightness: Brightness.light,
+    colorScheme: const ColorScheme.light(
+      primary: Colors.black,
+      onPrimary: Colors.white,
+      secondary: Colors.black,
+      onSecondary: Colors.white,
       surface: lightSurface,
+      onSurface: Colors.black,
     ),
     useMaterial3: true,
     scaffoldBackgroundColor: lightBackground,
     appBarTheme: const AppBarTheme(
       backgroundColor: lightSurface,
-      foregroundColor: Colors.black87,
+      foregroundColor: Colors.black,
       elevation: 0,
     ),
     cardTheme: CardThemeData(
       color: lightCard,
       elevation: 2,
-      shadowColor: Colors.black.withOpacity(0.1),
+      shadowColor: Colors.black.withValues(alpha: 0.1),
+    ),
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: Colors.black,
+        side: const BorderSide(color: Colors.black),
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        foregroundColor: Colors.black,
+      ),
     ),
     switchTheme: SwitchThemeData(
       thumbColor: WidgetStateProperty.resolveWith((states) {
@@ -95,28 +138,31 @@ class AppTheme {
       }),
       trackColor: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.selected)) {
-          return Colors.green.withOpacity(0.5);
+          return Colors.green.withValues(alpha: 0.5);
         }
-        return Colors.grey.withOpacity(0.3);
+        return Colors.grey.withValues(alpha: 0.3);
       }),
     ),
     dividerColor: Colors.grey.shade300,
     listTileTheme: const ListTileThemeData(
-      textColor: Colors.black87,
-      iconColor: Colors.black87,
+      textColor: Colors.black,
+      iconColor: Colors.black,
     ),
     textTheme: const TextTheme(
-      bodyLarge: TextStyle(color: Colors.black87),
-      bodyMedium: TextStyle(color: Colors.black87),
-      titleLarge: TextStyle(color: Colors.black87),
-      titleMedium: TextStyle(color: Colors.black87),
+      bodyLarge: TextStyle(color: Colors.black),
+      bodyMedium: TextStyle(color: Colors.black),
+      titleLarge: TextStyle(color: Colors.black),
+      titleMedium: TextStyle(color: Colors.black),
     ),
-    iconTheme: const IconThemeData(color: Colors.black87),
+    iconTheme: const IconThemeData(color: Colors.black),
     expansionTileTheme: const ExpansionTileThemeData(
       iconColor: Colors.grey,
       collapsedIconColor: Colors.grey,
-      textColor: Colors.black87,
-      collapsedTextColor: Colors.black87,
+      textColor: Colors.black,
+      collapsedTextColor: Colors.black,
+    ),
+    progressIndicatorTheme: const ProgressIndicatorThemeData(
+      color: Colors.black,
     ),
   );
 }

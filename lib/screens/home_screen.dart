@@ -147,12 +147,22 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: theme.brightness == Brightness.dark
+                  ? Colors.white
+                  : Colors.black,
               borderRadius: BorderRadius.circular(20),
             ),
-            child: Image.asset(
-              'assets/friedn-full.png',
-              height: 28,
+            child: ColorFiltered(
+              colorFilter: ColorFilter.mode(
+                theme.brightness == Brightness.dark
+                    ? Colors.black
+                    : Colors.white,
+                BlendMode.srcIn,
+              ),
+              child: Image.asset(
+                'assets/friedn-full.png',
+                height: 28,
+              ),
             ),
           ),
         ),
@@ -161,7 +171,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         builder: (context, provider, child) {
           if (provider.isLoading) {
             return const Center(
-              child: CircularProgressIndicator(color: Colors.white),
+              child: CircularProgressIndicator(),
             );
           }
 
@@ -216,7 +226,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   : 'Complete the setup steps below to start blocking apps.',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6),
+                color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
                 fontSize: 14,
               ),
             ),
@@ -314,8 +324,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
           color: isComplete
-              ? Colors.green.withOpacity(0.2)
-              : Colors.orange.withOpacity(0.2),
+              ? Colors.green.withValues(alpha: 0.2)
+              : Colors.orange.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(
@@ -331,7 +341,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ),
       subtitle: Text(
         subtitle,
-        style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6)),
+        style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6)),
       ),
       trailing: Icon(
         isComplete ? Icons.check_circle : Icons.chevron_right,
@@ -378,7 +388,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 child: Text(
                   'No blocking sessions yet. Enable blocking to start tracking.',
                   style: TextStyle(
-                    color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6),
+                    color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -395,7 +405,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 icon: Icons.calendar_view_week,
                 label: 'This week',
                 value: _formatMinutes(stats.weekMinutes),
-                color: Colors.blue,
+                color: theme.colorScheme.primary,
               ),
               const SizedBox(height: 12),
               _buildStatItem(
@@ -454,7 +464,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.2),
+            color: color.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(icon, color: color, size: 20),
@@ -483,8 +493,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     required int minutes,
   }) {
     final theme = Theme.of(context);
-    final rankColors = [Colors.amber, Colors.grey, Colors.brown];
-    final rankColor = rank <= 3 ? rankColors[rank - 1] : theme.colorScheme.primary;
+    final rankColor = theme.colorScheme.primary;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -494,7 +503,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             width: 28,
             height: 28,
             decoration: BoxDecoration(
-              color: rankColor.withOpacity(0.2),
+              color: rankColor.withValues(alpha: 0.2),
               shape: BoxShape.circle,
             ),
             child: Center(
@@ -544,7 +553,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           Text(
             _formatMinutes(minutes),
             style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6),
+              color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
             ),
           ),
         ],
@@ -595,7 +604,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                             : canEnable
                                 ? 'Scan NFC tag to enable'
                                 : 'Complete setup to enable',
-                        style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6)),
+                        style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6)),
                       ),
                     ],
                   ),
@@ -613,7 +622,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: Colors.orange.withOpacity(0.2),
+                  color: Colors.orange.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -678,7 +687,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               Text(
                 'Block apps for a specific duration. You can end it early by scanning your NFC tag.',
                 style: TextStyle(
-                  color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7),
+                  color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
                   fontSize: 14,
                 ),
               ),
@@ -692,7 +701,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       Text(
                         'Hours',
                         style: TextStyle(
-                          color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6),
+                          color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
                           fontSize: 12,
                         ),
                       ),
@@ -751,7 +760,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       Text(
                         'Minutes',
                         style: TextStyle(
-                          color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6),
+                          color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
                           fontSize: 12,
                         ),
                       ),
@@ -855,7 +864,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               'Scan your NFC tag to start ${_formatDuration(duration)} timer',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7),
+                color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
               ),
             ),
             const SizedBox(height: 8),
@@ -863,7 +872,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               'Hold your tag near the back of your phone',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.textTheme.bodySmall?.color?.withOpacity(0.5),
+                color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.5),
               ),
             ),
           ],
@@ -922,7 +931,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               'Scan your NFC tag to ${enableBlocking ? 'enable' : 'disable'} blocking',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7),
+                color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
               ),
             ),
             const SizedBox(height: 8),
@@ -930,7 +939,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               'Hold your tag near the back of your phone',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.textTheme.bodySmall?.color?.withOpacity(0.5),
+                color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.5),
               ),
             ),
           ],
@@ -993,7 +1002,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   label: Text(
                     app.appName,
                   ),
-                  backgroundColor: theme.colorScheme.primary.withOpacity(0.2),
+                  backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.2),
                 );
               }).toList(),
             ),

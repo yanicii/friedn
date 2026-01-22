@@ -58,7 +58,7 @@ class _AppSelectionScreenState extends State<AppSelectionScreen> {
 
     return Container(
       padding: const EdgeInsets.all(12),
-      color: Colors.orange.withOpacity(0.2),
+      color: Colors.orange.withValues(alpha: 0.2),
       child: Row(
         children: [
           const Icon(Icons.lock, color: Colors.orange, size: 20),
@@ -88,11 +88,11 @@ class _AppSelectionScreenState extends State<AppSelectionScreen> {
         },
         decoration: InputDecoration(
           hintText: 'Search apps...',
-          hintStyle: TextStyle(color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5)),
-          prefixIcon: Icon(Icons.search, color: theme.iconTheme.color?.withOpacity(0.5)),
+          hintStyle: TextStyle(color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.5)),
+          prefixIcon: Icon(Icons.search, color: theme.iconTheme.color?.withValues(alpha: 0.5)),
           suffixIcon: _searchQuery.isNotEmpty
               ? IconButton(
-                  icon: Icon(Icons.clear, color: theme.iconTheme.color?.withOpacity(0.5)),
+                  icon: Icon(Icons.clear, color: theme.iconTheme.color?.withValues(alpha: 0.5)),
                   onPressed: () {
                     _searchController.clear();
                     setState(() {
@@ -128,7 +128,7 @@ class _AppSelectionScreenState extends State<AppSelectionScreen> {
           Text(
             '$blockedCount of $totalCount apps blocked',
             style: TextStyle(
-              color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6),
+              color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
               fontSize: 14,
             ),
           ),
@@ -185,14 +185,14 @@ class _AppSelectionScreenState extends State<AppSelectionScreen> {
       title: Text(
         app.appName,
         style: theme.textTheme.bodyLarge?.copyWith(
-          color: canToggle ? null : theme.textTheme.bodyLarge?.color?.withOpacity(0.5),
+          color: canToggle ? null : theme.textTheme.bodyLarge?.color?.withValues(alpha: 0.5),
           fontWeight: FontWeight.w500,
         ),
       ),
       subtitle: Text(
         app.packageName,
         style: TextStyle(
-          color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5),
+          color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.5),
           fontSize: 12,
         ),
         maxLines: 1,
@@ -213,8 +213,8 @@ class _AppSelectionScreenState extends State<AppSelectionScreen> {
                     provider.toggleAppBlocked(app.packageName);
                   }
                 : null,
-            activeColor: Colors.red,
-            checkColor: Colors.white,
+            activeColor: theme.colorScheme.primary,
+            checkColor: theme.colorScheme.onPrimary,
           ),
         ],
       ),
