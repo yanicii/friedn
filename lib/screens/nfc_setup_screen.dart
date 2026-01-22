@@ -12,7 +12,6 @@ class NfcSetupScreen extends StatefulWidget {
 
 class _NfcSetupScreenState extends State<NfcSetupScreen> with WidgetsBindingObserver {
   bool _isScanning = false;
-  NfcTagInfo? _scannedTagInfo;
 
   @override
   void initState() {
@@ -35,42 +34,37 @@ class _NfcSetupScreenState extends State<NfcSetupScreen> with WidgetsBindingObse
         setState(() {
           _isScanning = false;
         });
-
-        // Check if tag is writable
-        if (!tagInfo.isWritable) {
-          _showNonWritableTagError();
-          return;
-        }
-
-        // Check if tag has existing data
-        if (tagInfo.hasData) {
-          _confirmOverwriteTagData(tagInfo);
-        } else {
-          setState(() {
-            _scannedTagInfo = tagInfo;
-          });
-        }
+        _showRegisterTagDialog(tagInfo);
       }
     });
   }
 
-  void _showNonWritableTagError() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('This NFC tag is read-only and cannot be used with friedn.'),
-        backgroundColor: Colors.red,
-        duration: Duration(seconds: 3),
-      ),
-    );
-  }
+  void _showRegisterTagDialog(NfcTagInfo tagInfo) {
+    final provider = context.read<AppStateProvider>();
+    final hasExistingTag = provider.registeredTagId != null;
 
-  void _confirmOverwriteTagData(NfcTagInfo tagInfo) {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Tag Contains Data'),
-        content: const Text(
-          'This NFC tag already contains data. Do you want to use it anyway? The existing data may be overwritten.',
+        title: const Text('Tag Detected'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              hasExistingTag
+                  ? 'Do you want to replace your existing tag with this one?'
+                  : 'Do you want to register this tag as your unlock key?',
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Tag ID: ${tagInfo.tagId}',
+              style: const TextStyle(
+                fontFamily: 'monospace',
+                fontSize: 12,
+              ),
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -80,13 +74,13 @@ class _NfcSetupScreenState extends State<NfcSetupScreen> with WidgetsBindingObse
           TextButton(
             onPressed: () {
               Navigator.pop(dialogContext);
-              setState(() {
-                _scannedTagInfo = tagInfo;
-              });
+              _doRegisterTag(provider, tagInfo.tagId);
             },
-            child: const Text(
-              'Use Anyway',
-              style: TextStyle(color: Colors.orange),
+            child: Text(
+              hasExistingTag ? 'Replace' : 'Register',
+              style: TextStyle(
+                color: hasExistingTag ? Colors.orange : null,
+              ),
             ),
           ),
         ],
@@ -119,10 +113,6 @@ class _NfcSetupScreenState extends State<NfcSetupScreen> with WidgetsBindingObse
                 _buildNfcStatusCard(provider),
                 const SizedBox(height: 24),
                 _buildScanSection(),
-                if (_scannedTagInfo != null) ...[
-                  const SizedBox(height: 24),
-                  _buildScannedTagCard(provider),
-                ],
               ],
             ),
           );
@@ -271,6 +261,27 @@ class _NfcSetupScreenState extends State<NfcSetupScreen> with WidgetsBindingObse
               textAlign: TextAlign.center,
               style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6)),
             ),
+            if (!_isScanning) ...[
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    size: 14,
+                    color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'No data will ever be written to your tag',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5),
+                    ),
+                  ),
+                ],
+              ),
+            ],
             const SizedBox(height: 20),
             if (_isScanning)
               SizedBox(
@@ -286,7 +297,6 @@ class _NfcSetupScreenState extends State<NfcSetupScreen> with WidgetsBindingObse
                 onPressed: () {
                   setState(() {
                     _isScanning = true;
-                    _scannedTagInfo = null;
                   });
                 },
                 icon: const Icon(Icons.nfc),
@@ -317,95 +327,8 @@ class _NfcSetupScreenState extends State<NfcSetupScreen> with WidgetsBindingObse
     );
   }
 
-  Widget _buildScannedTagCard(AppStateProvider provider) {
-    final theme = Theme.of(context);
-
-    return Card(
-      color: Colors.green.withOpacity(0.2),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            const Icon(
-              Icons.check_circle,
-              size: 48,
-              color: Colors.green,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Tag Detected!',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'ID: ${_scannedTagInfo!.tagId}',
-              style: TextStyle(
-                color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7),
-                fontFamily: 'monospace',
-              ),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton.icon(
-              onPressed: () => _registerTag(provider),
-              icon: const Icon(Icons.save),
-              label: const Text('Register This Tag'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 16,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _registerTag(AppStateProvider provider) {
-    // Check if there's already a registered tag
-    if (provider.registeredTagId != null) {
-      _confirmOverwriteTag(provider);
-    } else {
-      _doRegisterTag(provider);
-    }
-  }
-
-  void _confirmOverwriteTag(AppStateProvider provider) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Replace Existing Tag?'),
-        content: const Text(
-          'You already have a registered NFC tag. Do you want to replace it with this new tag?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(dialogContext);
-              _doRegisterTag(provider);
-            },
-            child: const Text(
-              'Replace',
-              style: TextStyle(color: Colors.orange),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _doRegisterTag(AppStateProvider provider) async {
-    await provider.registerNfcTag(_scannedTagInfo!.tagId);
+  Future<void> _doRegisterTag(AppStateProvider provider, String tagId) async {
+    await provider.registerNfcTag(tagId);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -413,9 +336,6 @@ class _NfcSetupScreenState extends State<NfcSetupScreen> with WidgetsBindingObse
           backgroundColor: Colors.green,
         ),
       );
-      setState(() {
-        _scannedTagInfo = null;
-      });
     }
   }
 
