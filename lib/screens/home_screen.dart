@@ -152,17 +152,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   : Colors.black,
               borderRadius: BorderRadius.circular(20),
             ),
-            child: ColorFiltered(
-              colorFilter: ColorFilter.mode(
-                theme.brightness == Brightness.dark
-                    ? Colors.black
-                    : Colors.white,
-                BlendMode.srcIn,
-              ),
-              child: Image.asset(
-                'assets/friedn-full.png',
-                height: 28,
-              ),
+            child: Image.asset(
+              theme.brightness == Brightness.dark
+                  ? 'assets/friedn-full-tp-black.png'
+                  : 'assets/friedn-full-tp-white.png',
+              height: 28,
             ),
           ),
         ),
@@ -206,11 +200,28 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            Icon(
-              isReady ? Icons.shield : Icons.warning_amber_rounded,
-              size: 64,
-              color: isReady ? Colors.green : Colors.orange,
-            ),
+            isReady
+                ? Container(
+                    width: 72,
+                    height: 72,
+                    decoration: BoxDecoration(
+                      color: theme.brightness == Brightness.dark
+                          ? Colors.white
+                          : Colors.black,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    padding: const EdgeInsets.all(12),
+                    child: Image.asset(
+                      theme.brightness == Brightness.dark
+                          ? 'assets/friedn-logo-v2-black.png'
+                          : 'assets/friedn-logo-v2-white.png',
+                    ),
+                  )
+                : const Icon(
+                    Icons.warning_amber_rounded,
+                    size: 64,
+                    color: Colors.orange,
+                  ),
             const SizedBox(height: 12),
             Text(
               isReady ? 'Ready to Block' : 'Setup Required',
