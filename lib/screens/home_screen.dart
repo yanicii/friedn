@@ -857,18 +857,24 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           mainAxisSize: MainAxisSize.min,
           children: [
             SizedBox(
-              width: 80,
-              height: 80,
-              child: CircularProgressIndicator(
-                color: theme.colorScheme.primary,
-                strokeWidth: 3,
+              width: 64,
+              height: 64,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  CircularProgressIndicator(
+                    color: theme.colorScheme.primary,
+                    strokeWidth: 3,
+                  ),
+                  Image.asset(
+                    theme.brightness == Brightness.dark
+                        ? 'assets/friedn-logo-v2-white.png'
+                        : 'assets/friedn-logo-v2-black.png',
+                    width: 32,
+                    height: 32,
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(height: 24),
-            Icon(
-              Icons.nfc,
-              size: 48,
-              color: theme.colorScheme.primary,
             ),
             const SizedBox(height: 16),
             Text(
@@ -924,18 +930,24 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           mainAxisSize: MainAxisSize.min,
           children: [
             SizedBox(
-              width: 80,
-              height: 80,
-              child: CircularProgressIndicator(
-                color: theme.colorScheme.primary,
-                strokeWidth: 3,
+              width: 64,
+              height: 64,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  CircularProgressIndicator(
+                    color: theme.colorScheme.primary,
+                    strokeWidth: 3,
+                  ),
+                  Image.asset(
+                    theme.brightness == Brightness.dark
+                        ? 'assets/friedn-logo-v2-white.png'
+                        : 'assets/friedn-logo-v2-black.png',
+                    width: 32,
+                    height: 32,
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(height: 24),
-            Icon(
-              Icons.nfc,
-              size: 48,
-              color: theme.colorScheme.primary,
             ),
             const SizedBox(height: 16),
             Text(
@@ -1000,22 +1012,29 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ],
             ),
             const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: blockedAppInfos.map((app) {
-                return Chip(
-                  avatar: app.icon != null
-                      ? CircleAvatar(
-                          backgroundImage: MemoryImage(app.icon!),
-                        )
-                      : null,
-                  label: Text(
-                    app.appName,
-                  ),
-                  backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.2),
-                );
-              }).toList(),
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.5,
+              ),
+              child: SingleChildScrollView(
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: blockedAppInfos.map((app) {
+                    return Chip(
+                      avatar: app.icon != null
+                          ? CircleAvatar(
+                              backgroundImage: MemoryImage(app.icon!),
+                            )
+                          : null,
+                      label: Text(
+                        app.appName,
+                      ),
+                      backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.2),
+                    );
+                  }).toList(),
+                ),
+              ),
             ),
           ],
         ),
