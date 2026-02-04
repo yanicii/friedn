@@ -81,7 +81,7 @@ Contributions are welcome! This is an open-source project and we appreciate your
 
 ### Reporting Issues
 
-If you find a bug or have a feature request, please [open an issue](https://github.com/YOUR_USERNAME/friedn/issues).
+If you find a bug or have a feature request, please [open an issue](https://github.com/yanicii/friedn/issues).
 
 ## License
 
@@ -91,4 +91,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 If you find this project helpful, consider supporting its development:
 
-[![PayPal](https://img.shields.io/badge/PayPal-Donate-blue.svg?logo=paypal)](https://www.paypal.com/paypalme/YOUR_PAYPAL_ID)
+[![PayPal](https://img.shields.io/badge/PayPal-Donate-blue.svg?logo=paypal)](https://www.paypal.com/paypalme/YannikR)
