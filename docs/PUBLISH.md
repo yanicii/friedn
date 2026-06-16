@@ -76,10 +76,10 @@ Once you have an account, in the Play Console complete:
 ## Checklist
 
 - [ ] Register Google Play Developer account and verify identity
-- [x] Ensure release keystore is backed up securely
-- [x] Write and host a privacy policy at a public URL
+- [ ] Ensure release keystore is backed up securely
+- [ ] Write and host a privacy policy at a public URL
 - [ ] Prepare store listing assets (icon, feature graphic, screenshots, descriptions)
-- [X] Build the AAB with `flutter build appbundle --release`
+- [ ] Build the AAB with `flutter build appbundle --release`
 - [ ] Create the app in Play Console
 - [ ] Fill out all "App content" requirements (privacy policy, content rating, data safety, target audience)
 - [ ] Submit permissions declaration forms (QUERY_ALL_PACKAGES, Accessibility Service, PACKAGE_USAGE_STATS, SYSTEM_ALERT_WINDOW)
